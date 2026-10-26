@@ -1,0 +1,27 @@
+# docker compose -f docker/docker-compose.yml up --build
+# Required env: QT_JWT_SECRET (long random string), QT_ADMIN_PASSWORD. Set QT_DEV_MODE=1 only for demos (shows OTP codes in the UI).
+services:
+  app:
+    build: { context: .., dockerfile: docker/Dockerfile }
+    environment:
+      QT_JWT_SECRET: ${QT_JWT_SECRET:?set a long random secret}
+      QT_ADMIN_PASSWORD: ${QT_ADMIN_PASSWORD:?set an admin password}
+      QT_DEV_MODE: ${QT_DEV_MODE:-0}
+    volumes: [ "appdata:/app/data" ]
+    expose: [ "8080" ]
+    restart: unless-stopped
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on: [ app ]
+    ports: [ "80:80", "443:443" ]
+    volumes: [ "./nginx.conf:/etc/nginx/conf.d/default.conf:ro", "./certs:/etc/nginx/certs:ro" ]
+    restart: unless-stopped
+  postgres:                      # provisioned for the production data model (database/schema.sql); the C++ server does not use it yet
+    image: postgres:16-alpine
+    environment: { POSTGRES_USER: qt, POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-change-me}", POSTGRES_DB: quantumtrade }
+    volumes: [ "pgdata:/var/lib/postgresql/data", "../database/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql:ro", "../database/seed.sql:/docker-entrypoint-initdb.d/2-seed.sql:ro" ]
+    expose: [ "5432" ]
+  redis:                         # provisioned for pub/sub + caching in a multi-node deployment; not used by the single-node server yet
+    image: redis:7-alpine
+    expose: [ "6379" ]
+volumes: { appdata: {}, pgdata: {} }
