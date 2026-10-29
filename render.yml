@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: quantumtrade
+    runtime: docker
+    dockerfilePath: ./docker/Dockerfile
+    dockerContext: .
+    region: singapore
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: QT_DEV_MODE
+        value: "1"
+      - key: QT_JWT_SECRET
+        generateValue: true
+      - key: QT_ADMIN_PASSWORD
+        sync: false

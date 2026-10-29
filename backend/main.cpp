@@ -37,8 +37,18 @@ static bool exists(const string& p) {
 }
 
 int main(int argc, char** argv) {
-    int port = atoi(getenvOr("QT_PORT", "8080").c_str());
+        // Hosting platforms such as Render inject PORT; QT_PORT overrides it.
+    string portEnv = getenvOr("PORT", "8080");
+    bool cloud = !getenvOr("PORT", "").empty();
+
+    int port = atoi(getenvOr("QT_PORT", portEnv).c_str());
     bool dev = getenvOr("QT_DEV_MODE", "1") != "0";
+
+    // Never run on a public host with the default admin password.
+    if (cloud && getenvOr("QT_ADMIN_PASSWORD", "").empty()) {
+        loge("QT_ADMIN_PASSWORD must be set when running on a hosting platform");
+        return 1;
+    }
 
     string dataDir = getenvOr("QT_DATA", "data");
 

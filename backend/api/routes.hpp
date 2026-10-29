@@ -550,7 +550,9 @@ inline void App::registerRoutes() {
             " (delivered by console in this build)"
         );
 
-        if (A.dev) {
+        // Demo mode shows only sign-up verification codes. Password-reset
+        // codes are never returned, otherwise anyone could reset any account.
+        if (A.dev && purpose == "verify") {
             out["dev_otp"] = c;
         }
     };
@@ -825,6 +827,16 @@ inline void App::registerRoutes() {
         );
 
         auto u = A.auth.find(email);
+
+                // The demo sign-in may only create or reuse demo-Google accounts,
+        // never an account that has a real password (admin, demo, ...).
+        if (u && u->phone != "google-demo") {
+            return r.error(
+                403,
+                "This email belongs to a password account. "
+                "Please log in with your password."
+            );
+        }
 
         if (!u) {
             uint64_t id = A.auth.create(
